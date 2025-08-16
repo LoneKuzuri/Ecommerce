@@ -1,0 +1,37 @@
+{
+  "kind": "collectionType",
+  "collectionName": "oils",
+  "info": {
+    "singularName": "oil",
+    "pluralName": "oils",
+    "displayName": "oil"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "stock": {
+      "type": "boolean",
+      "required": true
+    },
+    "Price": {
+      "type": "decimal",
+      "required": true
+    },
+    "Image": {
+      "type": "media",
+      "multiple": true,
+      "allowedTypes": [
+        "images",
+        "files",
+        "videos",
+        "audios"
+      ]
+    }
+  }
+}

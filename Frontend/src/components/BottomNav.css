@@ -1,0 +1,41 @@
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #fef08a;
+  border-top: 1px solid #fde047;
+  display: flex;
+  justify-content: space-around;
+  padding: 0.5rem 0;
+  z-index: 10;
+}
+
+.bottom-nav-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.5rem;
+  background: none;
+  border: none;
+  color: #a16207;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.bottom-nav-btn:hover {
+  background: #fde047;
+}
+
+.bottom-nav-btn.active {
+  color: #713f12;
+  font-weight: bold;
+  background: #fde047;
+}
+
+.bottom-nav-icon {
+  font-size: 1.25rem;
+  margin-bottom: 0.25rem;
+}

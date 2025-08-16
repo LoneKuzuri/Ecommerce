@@ -1,0 +1,13 @@
+.app-root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: #fef9c3;
+  font-family: 'Segoe UI', 'Roboto', 'Arial', sans-serif;
+}
+
+.app-main {
+  flex: 1;
+  padding: 1rem;
+  padding-bottom: 5rem;
+}
