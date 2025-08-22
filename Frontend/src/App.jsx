@@ -8,7 +8,7 @@ import Categories from "./Pages/Categories";
 import Cart from "./Pages/Cart";
 import Profile from "./Pages/Profile";
 
-import ProductList from "./components/ProductList"; // 👈 import
+import ProductList from "./components/ProductList";
 
 function App() {
   const [activeTab, setActiveTab] = useState("home");
@@ -47,7 +47,7 @@ function App() {
               setSelectedCategory={setSelectedCategory} 
               addToCart={addToCart} 
             />
-            <ProductList addToCart={addToCart} /> {/* 👈 Products list from Strapi */}
+            <ProductList addToCart={addToCart} /> 
           </>
         )}
 

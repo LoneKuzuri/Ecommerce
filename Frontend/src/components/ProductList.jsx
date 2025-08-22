@@ -1,20 +1,22 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import "./ProductList.css";
+import { fetchProducts } from "../api/api";
 import ProductCard from "./ProductCard";
-import { useEffect, useState } from "react";
-import { fetchProducts } from "../api";
 
 function ProductList() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     async function loadProducts() {
       try {
-        const data = await fetchProducts();
-        setProducts(data.data); // Strapi response has { data: [...] }
+        const response = await fetchProducts();
+        console.log("Full Response:", response); 
+        setProducts(Array.isArray(response?.data) ? response.data : []);
       } catch (err) {
-        console.error(err);
+        console.error("Error fetching products:", err);
+        setError("Failed to load products. Please try again later.");
       } finally {
         setLoading(false);
       }
@@ -22,24 +24,25 @@ function ProductList() {
     loadProducts();
   }, []);
 
-  if (loading) return <p>Loading...</p>;
+  if (loading) return <p className="loading-text">Loading products...</p>;
+  if (error) return <p className="error-text">{error}</p>;
+  if (products.length === 0) return <p className="empty-text">No products found.</p>;
 
   return (
-    <div>
+    <div className="product-list">
       <h2>Products</h2>
       <ul>
         {products.map((item) => (
-          <li key={item.id}>
-            <h3>{item.attributes.name}</h3>
-            <p>Price: ${item.attributes.price}</p>
-            {item.attributes.image?.data && (
-              <img
-                src={`http://localhost:1337${item.attributes.image.data.attributes.url}`}
-                alt={item.attributes.name}
-                width="150"
-              />
-            )}
-          </li>
+          <ProductCard
+            key={item.id}
+            product={{
+              name: item?.attributes?.name,
+              price: item?.attributes?.price,
+              unit: item?.attributes?.unit,
+              image: item?.attributes?.image?.data?.attributes?.url,
+            }}
+            addToCart={() => console.log("Add to cart:", item?.attributes?.name)}
+          />
         ))}
       </ul>
     </div>

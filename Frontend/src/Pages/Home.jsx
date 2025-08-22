@@ -2,7 +2,6 @@ import React from 'react';
 import './Home.css';
 import ProductCard from "../components/ProductCard";
 import { categories } from "../data/categories";
-import { products } from "../data/products";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { 
   faBowlRice, faUtensils, faOilCan, faBottleWater, faBoxOpen, faSoap 
@@ -67,15 +66,6 @@ function Home({ setActiveTab, setSelectedCategory, addToCart }) {
               </div>
               <span className="home-category-label">{category}</span>
             </button>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <h3 className="home-section-title">Featured Products</h3>
-        <div className="home-products-list">
-          {products.slice(0, 6).map(product => (
-            <ProductCard key={product.id} product={product} addToCart={addToCart} />
           ))}
         </div>
       </div>
