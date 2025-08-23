@@ -1,3 +1,4 @@
+// config/server.js
 module.exports = ({ env }) => ({
   host: env('HOST', '0.0.0.0'),
   port: env.int('PORT', 1337),
@@ -6,5 +7,10 @@ module.exports = ({ env }) => ({
   },
   webhooks: {
     populateRelations: env.bool('WEBHOOKS_POPULATE_RELATIONS', false),
+  },
+  // Add CORS configuration
+  cors: {
+    enabled: true,
+    origin: ['http://localhost:3000'], // Your React app's URL
   },
 });

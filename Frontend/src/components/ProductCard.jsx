@@ -1,25 +1,50 @@
+// ProductCard.jsx - Updated with fallback for missing images
 import React from "react";
-import "./ProductCard.css";
 
-function ProductCard({ product, addToCart }) {
-  
-  const imageUrl = product?.image
-    ? `http://localhost:1337${product.image}`
-    : "/fallback.png"; // local fallback
+function ProductCard({ product }) {
+  // Handle image URL - prepend Strapi URL if it's a relative path
+  const getImageUrl = () => {
+    if (!product.image) return null;
+    
+    if (product.image.startsWith('http')) {
+      return product.image;
+    }
+    
+    // If it's a relative path, prepend Strapi URL
+    return `http://localhost:1337${product.image}`;
+  };
+
+  const imageUrl = getImageUrl();
 
   return (
-    <li className="product-card">
-      <div className="product-card-image">
-        <img src={imageUrl} alt={product?.name || "No name"} />
-      </div>
-      <h3 className="product-card-name">{product?.name || "Unnamed Product"}</h3>
-      <p className="product-card-price">
-        Rs. {product?.price ?? "N/A"} / {product?.unit ?? ""}
-      </p>
-      <button onClick={() => addToCart(product)} className="product-card-btn">
-        Add to Cart
-      </button>
-    </li>
+    <div className="product-card">
+      {imageUrl ? (
+        <img
+          src={imageUrl}
+          alt={product.name}
+          style={{ width: "150px", height: "150px", objectFit: "cover" }}
+          onError={(e) => {
+            e.target.style.display = 'none';
+          }}
+        />
+      ) : (
+        <div style={{ 
+          width: "150px", 
+          height: "150px", 
+          backgroundColor: "#f0f0f0",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center"
+        }}>
+          No Image
+        </div>
+      )}
+      <h4>{product.name}</h4>
+      <p>Rs. {product.price}</p>
+      {product.stock !== undefined && (
+        <p>{product.stock ? 'In Stock' : 'Out of Stock'}</p>
+      )}
+    </div>
   );
 }
 

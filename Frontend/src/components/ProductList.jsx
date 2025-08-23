@@ -1,22 +1,23 @@
+// ProductList.jsx - Updated with error state
 import React, { useEffect, useState } from "react";
-import "./ProductList.css";
-import { fetchProducts } from "../api/api";
+import { fetchOil } from "../api/api";
 import ProductCard from "./ProductCard";
 
 function ProductList() {
-  const [products, setProducts] = useState([]);
+  const [oils, setOils] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     async function loadProducts() {
       try {
-        const response = await fetchProducts();
-        console.log("Full Response:", response); 
-        setProducts(Array.isArray(response?.data) ? response.data : []);
+        setLoading(true);
+        setError(null);
+        const oilProducts = await fetchOil();
+        setOils(oilProducts);
       } catch (err) {
-        console.error("Error fetching products:", err);
-        setError("Failed to load products. Please try again later.");
+        console.error("Error loading products:", err);
+        setError(err.message);
       } finally {
         setLoading(false);
       }
@@ -24,27 +25,24 @@ function ProductList() {
     loadProducts();
   }, []);
 
-  if (loading) return <p className="loading-text">Loading products...</p>;
-  if (error) return <p className="error-text">{error}</p>;
-  if (products.length === 0) return <p className="empty-text">No products found.</p>;
+  if (loading) return <p>Loading oils...</p>;
+  
+  if (error) return (
+    <div>
+      <p style={{ color: 'red' }}>Error: {error}</p>
+      <p>Make sure Strapi is running on http://localhost:1337</p>
+    </div>
+  );
 
   return (
     <div className="product-list">
-      <h2>Products</h2>
-      <ul>
-        {products.map((item) => (
-          <ProductCard
-            key={item.id}
-            product={{
-              name: item?.attributes?.name,
-              price: item?.attributes?.price,
-              unit: item?.attributes?.unit,
-              image: item?.attributes?.image?.data?.attributes?.url,
-            }}
-            addToCart={() => console.log("Add to cart:", item?.attributes?.name)}
-          />
-        ))}
-      </ul>
+      {oils.length > 0 ? (
+        oils.map(product => (
+          <ProductCard key={product.id} product={product} />
+        ))
+      ) : (
+        <p>No oils available</p>
+      )}
     </div>
   );
 }
