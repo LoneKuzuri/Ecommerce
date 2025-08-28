@@ -1,14 +1,12 @@
-import { useState, useMemo } from "react";
-import "./index.css";
+import { useState } from "react";
 import Header from "./components/Header";
 import BottomNav from "./components/BottomNav";
-
 import Home from "./Pages/Home";
 import Categories from "./Pages/Categories";
 import Cart from "./Pages/Cart";
 import Profile from "./Pages/Profile";
-
 import ProductList from "./components/ProductList";
+import './index.css'
 
 function App() {
   const [activeTab, setActiveTab] = useState("home");
@@ -16,63 +14,111 @@ function App() {
   const [cart, setCart] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
 
-  const addToCart = (product) => {
-    setCart(prev => {
-      const existing = prev.find(item => item.id === product.id);
+  // Add to cart
+  const addToCart = (product, quantity = 1) => {
+    setCart((prev) => {
+      const existing = prev.find((item) => item.id === product.id);
       if (existing) {
-        return prev.map(item =>
+        return prev.map((item) =>
           item.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
+            ? { ...item, quantity: item.quantity + quantity }
             : item
         );
       }
-      return [...prev, { ...product, quantity: 1 }];
+      return [...prev, { ...product, quantity }];
     });
   };
 
+  // Update cart quantity
+  const updateCartQuantity = (id, newQuantity) => {
+    if (newQuantity <= 0) {
+      removeFromCart(id);
+      return;
+    }
+    setCart((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, quantity: newQuantity } : item
+      )
+    );
+  };
+
+  // Remove from cart
+  const removeFromCart = (id) => {
+    setCart((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  // Get cart item quantity
+  const getCartItemQuantity = (productId) => {
+    const item = cart.find((item) => item.id === productId);
+    return item ? item.quantity : 0;
+  };
+
+  // Totals
+  const getTotalItems = () =>
+    cart.reduce((sum, item) => sum + item.quantity, 0);
+  const getTotalPrice = () =>
+    cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
   return (
-    <div className="app-root">
-      <Header 
-        searchQuery={searchQuery} 
-        setSearchQuery={setSearchQuery} 
-        getTotalItems={() => cart.reduce((s, i) => s + i.quantity, 0)} 
+    <div className="flex flex-col min-h-screen bg-gray-50">
+      {/* ✅ Top Header */}
+      <Header
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        getTotalItems={getTotalItems}
         setActiveTab={setActiveTab}
       />
 
-      <main className="app-main">
-        {activeTab === 'home' && (
-          <>
-            <Home 
-              setActiveTab={setActiveTab} 
-              setSelectedCategory={setSelectedCategory} 
-              addToCart={addToCart} 
+      {/* ✅ Main Body */}
+      <main className="flex-1 p-4 bg-white">
+        {activeTab === "home" && (
+          <div className="mb-8 animate-fadeIn">
+            <Home
+              setActiveTab={setActiveTab}
+              setSelectedCategory={setSelectedCategory}
+              addToCart={addToCart}
             />
-            <ProductList addToCart={addToCart} /> 
-          </>
+            <ProductList
+              addToCart={addToCart}
+              getCartItemQuantity={getCartItemQuantity}
+              updateCartQuantity={updateCartQuantity}
+            />
+          </div>
         )}
 
-        {activeTab === 'categories' && (
-          <Categories 
-            selectedCategory={selectedCategory} 
-            setSelectedCategory={setSelectedCategory} 
-            addToCart={addToCart} 
-          />
+        {activeTab === "categories" && (
+          <div className="mb-8 animate-fadeIn">
+            <Categories
+              selectedCategory={selectedCategory}
+              setSelectedCategory={setSelectedCategory}
+              addToCart={addToCart}
+              getCartItemQuantity={getCartItemQuantity}
+              updateCartQuantity={updateCartQuantity}
+            />
+          </div>
         )}
 
-        {activeTab === 'cart' && (
-          <Cart 
-            cart={cart} 
-            updateCartQuantity={(id, q) => setCart(prev => prev.map(item => item.id === id ? { ...item, quantity: q } : item))} 
-            removeFromCart={(id) => setCart(prev => prev.filter(i => i.id !== id))} 
-            getTotalItems={() => cart.reduce((s, i) => s + i.quantity, 0)} 
-            getTotalPrice={() => cart.reduce((s, i) => s + i.price * i.quantity, 0)} 
-            setActiveTab={setActiveTab} 
-          />
+        {activeTab === "cart" && (
+          <div className="mb-8 animate-fadeIn">
+            <Cart
+              cart={cart}
+              updateCartQuantity={updateCartQuantity}
+              removeFromCart={removeFromCart}
+              getTotalItems={getTotalItems}
+              getTotalPrice={getTotalPrice}
+              setActiveTab={setActiveTab}
+            />
+          </div>
         )}
 
-        {activeTab === 'profile' && <Profile />}
+        {activeTab === "profile" && (
+          <div className="mb-8 animate-fadeIn">
+            <Profile />
+          </div>
+        )}
       </main>
 
+      {/* ✅ Bottom Navigation */}
       <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
     </div>
   );

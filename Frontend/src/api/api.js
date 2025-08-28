@@ -1,92 +1,46 @@
-// api.js - Updated with populate and better debugging
+// api.js - Fixed version with proper boolean stock handling
 const STRAPI_BASE_URL = 'http://localhost:1337';
 
-export const fetchOil = async () => {
+const fetchFromCollection = async (collectionName) => {
   try {
-    // Add populate=* to get all related data including images
-    const url = `${STRAPI_BASE_URL}/api/oils?populate=*`;
-    console.log('Fetching from:', url);
+    const url = `${STRAPI_BASE_URL}/api/${collectionName}?populate=*`;
+    console.log(`Fetching from ${collectionName}:`, url);
     
     const response = await fetch(url);
-    console.log('Response status:', response.status);
+    console.log(`Response status for ${collectionName}:`, response.status);
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     
     const data = await response.json();
-    console.log('Raw API response:', data);
+    console.log(`Raw API response for ${collectionName}:`, data);
     
-    // Log the first item to see exact structure
-    if (data.data && data.data[0]) {
-      console.log('First item structure:', data.data[0]);
-      console.log('First item attributes:', data.data[0].attributes);
-      
-      // Check for image in different locations
-      if (data.data[0].image) {
-        console.log('Image structure (direct):', data.data[0].image);
-      }
-      if (data.data[0].attributes?.image) {
-        console.log('Image structure (attributes):', data.data[0].attributes.image);
-      }
-      
-      // Log all possible image-related fields
-      const item = data.data[0];
-      console.log('All item keys:', Object.keys(item));
-      Object.keys(item).forEach(key => {
-        if (key.toLowerCase().includes('image') || key.toLowerCase().includes('photo') || key.toLowerCase().includes('picture')) {
-          console.log(`Found image-related field "${key}":`, item[key]);
-        }
-      });
-    }
-    
-    // Your Strapi structure has data directly on items, not under attributes
     if (data.data && Array.isArray(data.data)) {
       const products = data.data.map(item => {
-        console.log('Processing item:', item.id, 'Full item:', item);
+        console.log(`Processing ${collectionName} item:`, item.id, 'Full item:', item);
         
-        // Data is directly on item, not under item.attributes
-        // Handle different possible image structures - FIXED VERSION
+        // Handle different possible image structures
         let imageUrl = null;
-        
-        console.log(`Item ${item.id} image field:`, item.image);
-        
-        // Check various image field possibilities
         const imageField = item.image || item.Image || item.photo || item.picture;
         
         if (imageField) {
-          console.log(`Found image field for item ${item.id}:`, imageField);
+          console.log(`Found image field for ${collectionName} item ${item.id}:`, imageField);
           
-          // Handle array of image objects (your structure)
           if (Array.isArray(imageField) && imageField.length > 0) {
-            // Take the first image from the array
             const firstImage = imageField[0];
             imageUrl = firstImage.url || firstImage.attributes?.url;
-            console.log(`Array format - extracted URL:`, imageUrl);
-          }
-          // Handle Strapi media format with data wrapper
-          else if (imageField.data) {
+          } else if (imageField.data) {
             if (Array.isArray(imageField.data)) {
               imageUrl = imageField.data[0]?.attributes?.url || imageField.data[0]?.url;
             } else {
               imageUrl = imageField.data.attributes?.url || imageField.data.url;
             }
-            console.log(`Data wrapper format - extracted URL:`, imageUrl);
-          } 
-          // Handle direct string URL
-          else if (typeof imageField === 'string') {
+          } else if (typeof imageField === 'string') {
             imageUrl = imageField;
-            console.log(`String format - URL:`, imageUrl);
-          } 
-          // Handle object with url property
-          else if (imageField.url) {
+          } else if (imageField.url) {
             imageUrl = imageField.url;
-            console.log(`Direct object format - URL:`, imageUrl);
           }
-          
-          console.log(`Final processed image URL for item ${item.id}:`, imageUrl);
-        } else {
-          console.log(`No image field found for item ${item.id}`);
         }
         
         // Add full URL if image exists and is relative
@@ -94,66 +48,189 @@ export const fetchOil = async () => {
           imageUrl = `${STRAPI_BASE_URL}${imageUrl}`;
         }
         
+        // FIXED: Proper stock handling for both boolean and number
+        const stockValue = item.stock;
+        const isInStock = typeof stockValue === 'boolean' ? stockValue : (stockValue > 0);
+        
+        console.log(`Item ${item.id} stock:`, stockValue, 'Type:', typeof stockValue, 'Is in stock:', isInStock);
+        
         return {
           id: item.id,
           name: item.name || item.title || 'Unknown Product',
-          price: item.Price || item.price || 0, // Note: your field is "Price" with capital P
+          price: item.Price || item.price || 0,
           description: item.description || '',
-          stock: item.stock || item.quantity || 0,
+          stock: stockValue, // Keep original stock value
           status: item.status || 'available',
           image: imageUrl,
-          // Log what we're returning for each product
-          _debug: {
-            rawItem: item,
-            processedImage: imageUrl
-          }
+          category: collectionName,
+          // FIXED: Add explicit inStock boolean
+          inStock: isInStock,
+          // Add stock display for UI
+          stockDisplay: typeof stockValue === 'boolean' 
+            ? (stockValue ? 'Available' : 'Out of Stock')
+            : stockValue > 0 
+            ? `${stockValue} available`
+            : 'Out of Stock'
         };
       });
       
-      console.log('Mapped products:', products);
+      console.log(`Mapped ${collectionName} products:`, products);
       return products;
     }
     
-    // Fallback if response format is different
-    if (Array.isArray(data)) {
-      console.log('Using fallback mapping for direct array response');
-      const products = data.map(item => ({
-        id: item.id,
-        name: item.name || 'Unknown Product',
-        price: item.price || 0,
-        description: item.description || '',
-        stock: item.stock || 0,
-        status: item.status || 'available',
-        image: item.image?.url ? `${STRAPI_BASE_URL}${item.image.url}` : null,
-      }));
-      console.log('Mapped products (fallback):', products);
-      return products;
-    }
-    
-    console.error('Unexpected API response format:', data);
-    throw new Error('Invalid API response format');
+    return [];
     
   } catch (error) {
-    console.error('Error fetching oil products:', error);
-    throw new Error(`Failed to fetch products from Strapi: ${error.message}`);
+    console.error(`Error fetching ${collectionName} products:`, error);
+    throw new Error(`Failed to fetch ${collectionName} from Strapi: ${error.message}`);
   }
 };
 
-// Alternative function to fetch with specific populate fields
-export const fetchOilWithSpecificFields = async () => {
+// Specific fetch functions for each category
+export const fetchOil = async () => {
+  return await fetchFromCollection('oils');
+};
+
+export const fetchChamalChiura = async () => {
+  return await fetchFromCollection('chamal-and-chiuras');
+};
+
+export const fetchDaal = async () => {
+  return await fetchFromCollection('daals');
+};
+
+// Fetch all products from all categories
+export const fetchAllProducts = async () => {
   try {
-    // Only populate specific fields if you know them
-    const url = `${STRAPI_BASE_URL}/api/oils?populate[image]=*&fields[0]=name&fields[1]=price&fields[2]=description&fields[3]=stock&fields[4]=status`;
-    console.log('Fetching with specific fields from:', url);
+    console.log('Fetching all products from all categories...');
     
-    const response = await fetch(url);
-    const data = await response.json();
+    const [oils, chamalChiura, daals] = await Promise.all([
+      fetchOil().catch(err => {
+        console.warn('Could not fetch oils:', err.message);
+        return [];
+      }),
+      fetchChamalChiura().catch(err => {
+        console.warn('Could not fetch chamal & chiura:', err.message);
+        return [];
+      }),
+      fetchDaal().catch(err => {
+        console.warn('Could not fetch daals:', err.message);
+        return [];
+      })
+    ]);
     
-    console.log('Specific fields response:', data);
-    return data;
+    const allProducts = [...oils, ...chamalChiura, ...daals];
+    console.log('All products combined:', allProducts);
+    return allProducts;
     
   } catch (error) {
-    console.error('Error fetching with specific fields:', error);
-    throw error;
+    console.error('Error fetching all products:', error);
+    return [];
+  }
+};
+
+// Get products by category
+export const fetchProductsByCategory = async (category) => {
+  const categoryMap = {
+    'oil': 'oils',
+    'oils': 'oils',
+    'chamal': 'chamal-and-chiuras',
+    'chiura': 'chamal-and-chiuras',
+    'chamal-chiura': 'chamal-and-chiuras',
+    'chamal-and-chiuras': 'chamal-and-chiuras',
+    'daal': 'daals',
+    'daals': 'daals'
+  };
+  
+  const collectionName = categoryMap[category.toLowerCase()];
+  
+  if (!collectionName) {
+    throw new Error(`Unknown category: ${category}`);
+  }
+  
+  return await fetchFromCollection(collectionName);
+};
+
+// Search products across all categories
+export const searchProducts = async (searchTerm) => {
+  try {
+    const allProducts = await fetchAllProducts();
+    
+    if (!searchTerm || searchTerm.trim() === '') {
+      return allProducts;
+    }
+    
+    const searchLower = searchTerm.toLowerCase();
+    
+    return allProducts.filter(product => 
+      product.name.toLowerCase().includes(searchLower) ||
+      product.description.toLowerCase().includes(searchLower) ||
+      product.category.toLowerCase().includes(searchLower)
+    );
+    
+  } catch (error) {
+    console.error('Error searching products:', error);
+    throw new Error(`Search failed: ${error.message}`);
+  }
+};
+
+// Get available categories
+export const getAvailableCategories = async () => {
+  try {
+    const allProducts = await fetchAllProducts();
+    const categories = [...new Set(allProducts.map(product => product.category))];
+    
+    return categories.map(category => ({
+      name: category,
+      displayName: getCategoryDisplayName(category),
+      count: allProducts.filter(product => product.category === category).length
+    }));
+    
+  } catch (error) {
+    console.error('Error getting categories:', error);
+    return [];
+  }
+};
+
+// Helper function to get display names for categories
+const getCategoryDisplayName = (category) => {
+  const displayNames = {
+    'oils': 'Oils (तेल)',
+    'chamal-and-chiuras': 'Rice & Chiura (चामल र चिउरा)',
+    'daal': 'Lentils (दाल)'
+  };
+  
+  return displayNames[category] || category;
+};
+
+// Debug function to check stock handling
+export const debugStockHandling = async () => {
+  console.log('=== DEBUGGING STOCK HANDLING ===');
+  
+  try {
+    const oils = await fetchOil();
+    console.log('Oils with stock info:');
+    oils.forEach(product => {
+      console.log(`- ${product.name}:`, {
+        originalStock: product.stock,
+        stockType: typeof product.stock,
+        inStock: product.inStock,
+        stockDisplay: product.stockDisplay
+      });
+    });
+    
+    const chamalChiura = await fetchChamalChiura();
+    console.log('Chamal & Chiura with stock info:');
+    chamalChiura.forEach(product => {
+      console.log(`- ${product.name}:`, {
+        originalStock: product.stock,
+        stockType: typeof product.stock,
+        inStock: product.inStock,
+        stockDisplay: product.stockDisplay
+      });
+    });
+    
+  } catch (error) {
+    console.error('Debug failed:', error);
   }
 };
