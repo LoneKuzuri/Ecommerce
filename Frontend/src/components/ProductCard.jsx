@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-function ProductCard({ product, onAddToCart, cartQuantity = 0, onUpdateQuantity }) {
+const ProductCard = ({ product, onAddToCart, cartQuantity = 0, onUpdateQuantity }) => {
   const [isImageLoading, setIsImageLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
 
@@ -202,7 +202,7 @@ function ProductCard({ product, onAddToCart, cartQuantity = 0, onUpdateQuantity 
                   onClick={handleQuantityIncrease}
                   disabled={
                     cartQuantity >=
-                    (typeof product.stock === "number" ? product.stock : 999)
+                    (typeof product.stock === "boolean" ? product.stock : 999)
                   }
                   className="w-10 h-10 bg-white border-2 border-gray-200 rounded-lg hover:border-green-300 hover:bg-green-50 text-xl font-bold transition-all duration-200 flex items-center justify-center shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -226,6 +226,6 @@ function ProductCard({ product, onAddToCart, cartQuantity = 0, onUpdateQuantity 
       <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-400/0 via-purple-400/0 to-pink-400/0 hover:from-blue-400/5 hover:via-purple-400/5 hover:to-pink-400/5 transition-all duration-500 pointer-events-none"></div>
     </div>
   );
-}
+};
 
 export default ProductCard;

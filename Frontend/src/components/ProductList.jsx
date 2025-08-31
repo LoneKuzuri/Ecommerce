@@ -1,292 +1,234 @@
-import React, { useEffect, useState } from "react";
-import { fetchAllProducts, fetchProductsByCategory, searchProducts, getAvailableCategories } from "../api/api";
-import ProductCard from "./ProductCard";
-import { CSSTransition, TransitionGroup } from "react-transition-group";
-import "./transistions.css";
+import React, { useState, useEffect } from 'react';
+import ProductCard from './ProductCard';
+import { fetchAllProducts, fetchProductsByCategory, getAvailableCategories } from "../api/api";
 
-function ProductList({ addToCart, getCartItemQuantity, updateCartQuantity }) {
+function ProductList() {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
 
-  // Initial load
+  // Cart state
+  const [cart, setCart] = useState([]);
+
+  // Load products + categories on mount
   useEffect(() => {
-    loadInitialData();
+    loadProducts();
+    loadCategories();
+
+    // Load cart from localStorage
+    const storedCart = JSON.parse(localStorage.getItem("cart")) || [];
+    setCart(storedCart);
   }, []);
 
-  const loadInitialData = async () => {
+  // Update localStorage whenever cart changes
+  useEffect(() => {
+    localStorage.setItem("cart", JSON.stringify(cart));
+  }, [cart]);
+
+  const loadProducts = async () => {
     try {
       setLoading(true);
       setError(null);
-      
-      // Load categories and all products
-      const [productsData, categoriesData] = await Promise.all([
-        fetchAllProducts(),
-        getAvailableCategories()
-      ]);
-      
-      console.log("Loaded products:", productsData);
-      console.log("Loaded categories:", categoriesData);
-      
-      setProducts(productsData);
-      setCategories(categoriesData);
-      
+      const fetchedProducts = await fetchAllProducts();
+      setProducts(fetchedProducts);
     } catch (err) {
-      console.error("Error loading initial data:", err);
-      setError(err.message);
+      setError('Failed to load products: ' + err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  // Handle category change
-  const handleCategoryChange = async (categoryName) => {
+  const loadCategories = async () => {
+    try {
+      const fetchedCategories = await getAvailableCategories();
+      setCategories(fetchedCategories);
+    } catch (err) {
+      console.error('Error loading categories:', err);
+    }
+  };
+
+  const loadProductsByCategory = async (category) => {
     try {
       setLoading(true);
-      setSelectedCategory(categoryName);
-      setSearchTerm(''); // Clear search when changing category
-      
-      let productsData;
-      if (categoryName === 'all') {
-        productsData = await fetchAllProducts();
+      setError(null);
+      if (category === 'all') {
+        await loadProducts();
       } else {
-        productsData = await fetchProductsByCategory(categoryName);
+        const fetchedProducts = await fetchProductsByCategory(category);
+        setProducts(fetchedProducts);
       }
-      
-      setProducts(productsData);
-      console.log(`Loaded ${categoryName} products:`, productsData);
-      
     } catch (err) {
-      console.error(`Error loading ${categoryName} products:`, err);
-      setError(`Failed to load ${categoryName} products: ${err.message}`);
+      setError('Failed to load category products: ' + err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  // Handle search
-  const handleSearch = async (searchValue) => {
-    setSearchTerm(searchValue);
-    
-    if (searchValue.trim() === '') {
-      // If search is empty, reload current category
-      handleCategoryChange(selectedCategory);
-      return;
-    }
-    
-    try {
-      setIsSearching(true);
-      const searchResults = await searchProducts(searchValue);
-      setProducts(searchResults);
-      console.log(`Search results for "${searchValue}":`, searchResults);
-      
-    } catch (err) {
-      console.error('Error searching products:', err);
-      setError(`Search failed: ${err.message}`);
-    } finally {
-      setIsSearching(false);
+  const handleCategoryChange = (category) => {
+    setSelectedCategory(category);
+    loadProductsByCategory(category);
+  };
+
+  // Add product to cart or increase qty if already in cart
+  const handleAddToCart = (product) => {
+    setCart(prevCart => {
+      const existing = prevCart.find(item => item.id === product.id);
+      if (existing) {
+        return prevCart.map(item =>
+          item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+        );
+      }
+      return [...prevCart, { ...product, quantity: 1 }];
+    });
+  };
+
+  // Update quantity or remove if zero
+  const handleUpdateQuantity = (productId, newQty) => {
+    if (newQty < 1) {
+      setCart(prevCart => prevCart.filter(item => item.id !== productId));
+    } else {
+      setCart(prevCart =>
+        prevCart.map(item =>
+          item.id === productId ? { ...item, quantity: newQty } : item
+        )
+      );
     }
   };
 
-  // Get category display name
-  const getCategoryDisplayName = (categoryName) => {
-    if (categoryName === 'all') return 'All Products';
-    const category = categories.find(cat => cat.name === categoryName);
-    return category ? category.displayName : categoryName;
+  const getCartQuantity = (productId) => {
+    const found = cart.find(item => item.id === productId);
+    return found ? found.quantity : 0;
   };
 
-  // Loading state
-  if (loading && !isSearching) {
+  // Clear full cart
+  const clearCart = () => {
+    setCart([]);
+  };
+
+  const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const totalPrice = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+  if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-10">
-        <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
-        <p className="mt-4 text-gray-600 animate-pulse">
-          {selectedCategory === 'all' ? 'Loading all products...' : `Loading ${getCategoryDisplayName(selectedCategory)}...`}
-        </p>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 text-lg">Loading products...</p>
+        </div>
       </div>
     );
   }
 
-  // Error state
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center py-10 text-center animate-fadeIn">
-        <div className="text-6xl mb-4">❌</div>
-        <p className="text-red-500 font-medium mb-2">Error: {error}</p>
-        <p className="text-gray-500 mb-4">
-          Make sure Strapi is running on{" "}
-          <span className="font-mono">http://localhost:1337</span>
-        </p>
-        <button
-          onClick={loadInitialData}
-          className="px-6 py-3 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition"
-        >
-          🔄 Retry
-        </button>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center max-w-md mx-auto p-6">
+          <div className="text-6xl mb-4">😞</div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Oops! Something went wrong</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button
+            onClick={loadProducts}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="px-6 py-10">
-      {/* Search and Filter Header */}
-      <div className="mb-8 animate-fadeInDown">
-        {/* Search Bar */}
-        <div className="max-w-md mx-auto mb-6">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search products... (e.g., नेवारी, चामल, दाल)"
-              value={searchTerm}
-              onChange={(e) => handleSearch(e.target.value)}
-              className="w-full px-4 py-3 pl-10 pr-4 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition"
-            />
-            <div className="absolute left-3 top-3 text-gray-400">
-              {isSearching ? (
-                <div className="w-5 h-5 border-2 border-gray-400 border-t-blue-500 rounded-full animate-spin"></div>
-              ) : (
-                <span className="text-xl">🔍</span>
-              )}
-            </div>
-            {searchTerm && (
-              <button
-                onClick={() => handleSearch('')}
-                className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
-              >
-                ❌
-              </button>
-            )}
+    <div className="min-h-screen bg-gray-50">
+      {/* Header with Cart Summary */}
+      <div className="bg-white shadow-sm sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Our Products</h1>
+            <p className="text-gray-600">{products.length} products available</p>
           </div>
+
+          {/* Cart Summary */}
+          {cart.length > 0 && (
+            <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg px-6 py-3 border border-blue-200 flex items-center space-x-4">
+              <div className="text-center">
+                <div className="text-lg font-bold text-blue-600">{totalItems}</div>
+                <div className="text-xs text-blue-500">Items</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold text-blue-600">Rs. {totalPrice.toLocaleString()}</div>
+                <div className="text-xs text-blue-500">Total</div>
+              </div>
+              <button
+                onClick={clearCart}
+                className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm font-medium transition-colors"
+              >
+                Clear Cart
+              </button>
+            </div>
+          )}
         </div>
+      </div>
 
-        {/* Category Pills */}
-        <div className="flex flex-wrap justify-center gap-3 mb-6">
-          {/* All Products */}
-          <button
-            onClick={() => handleCategoryChange('all')}
-            className={`px-4 py-2 rounded-full font-medium transition ${
-              selectedCategory === 'all'
-                ? 'bg-blue-600 text-white shadow-lg'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            🌟 All Products ({categories.reduce((total, cat) => total + cat.count, 0)})
-          </button>
-
-          {/* Individual Categories */}
-          {categories.map((category) => (
+      {/* Category Filter */}
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold text-gray-800 mb-4">Filter by Category</h2>
+          <div className="flex flex-wrap gap-2">
             <button
-              key={category.name}
-              onClick={() => handleCategoryChange(category.name)}
-              className={`px-4 py-2 rounded-full font-medium transition ${
-                selectedCategory === category.name
+              onClick={() => handleCategoryChange('all')}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                selectedCategory === 'all'
                   ? 'bg-blue-600 text-white shadow-lg'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  : 'bg-white text-gray-600 hover:bg-blue-50 border border-gray-200'
               }`}
             >
-              {getCategoryIcon(category.name)} {category.displayName} ({category.count})
+              All Products
             </button>
-          ))}
-        </div>
-
-        {/* Results Header */}
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">
-            {searchTerm ? `Search Results for "${searchTerm}"` : getCategoryDisplayName(selectedCategory)}
-          </h2>
-          <p className="text-gray-500">
-            {isSearching ? 'Searching...' : `${products.length} products found`}
-          </p>
-        </div>
-      </div>
-
-      {/* Product Grid */}
-      <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-        <TransitionGroup component={null}>
-          {products.length > 0 ? (
-            products.map((product) => (
-              <CSSTransition key={product.id} timeout={400} classNames="fade">
-                <ProductCard
-                  product={product}
-                  onAddToCart={addToCart}
-                  cartQuantity={
-                    getCartItemQuantity ? getCartItemQuantity(product.id) : 0
-                  }
-                  onUpdateQuantity={updateCartQuantity}
-                />
-              </CSSTransition>
-            ))
-          ) : (
-            <CSSTransition timeout={400} classNames="fade">
-              <div className="col-span-full flex flex-col items-center justify-center py-12 text-center">
-                <div className="text-6xl mb-4">
-                  {searchTerm ? '🔍' : '📦'}
-                </div>
-                <h3 className="text-xl font-semibold text-gray-700 mb-2">
-                  {searchTerm 
-                    ? `No products found for "${searchTerm}"`
-                    : `No products available in ${getCategoryDisplayName(selectedCategory)}`
-                  }
-                </h3>
-                <p className="text-gray-500 mb-4">
-                  {searchTerm 
-                    ? 'Try searching with different keywords'
-                    : 'Check back later for new products!'
-                  }
-                </p>
-                {searchTerm && (
-                  <button
-                    onClick={() => handleSearch('')}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-                  >
-                    Clear Search
-                  </button>
-                )}
-              </div>
-            </CSSTransition>
-          )}
-        </TransitionGroup>
-      </div>
-
-      {/* Quick Stats */}
-      {!searchTerm && products.length > 0 && (
-        <div className="mt-12 text-center animate-fadeIn">
-          <div className="inline-flex items-center space-x-6 bg-gray-50 px-6 py-4 rounded-xl">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">{products.length}</div>
-              <div className="text-sm text-gray-600">Products</div>
-            </div>
-            <div className="w-px h-8 bg-gray-300"></div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">
-                {products.filter(p => p.inStock !== undefined ? p.inStock : (p.stock > 0 || p.stock === true)).length}
-              </div>
-              <div className="text-sm text-gray-600">In Stock</div>
-            </div>
-            <div className="w-px h-8 bg-gray-300"></div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600">{categories.length}</div>
-              <div className="text-sm text-gray-600">Categories</div>
-            </div>
+            {categories.map(category => (
+              <button
+                key={category.name}
+                onClick={() => handleCategoryChange(category.name)}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                  selectedCategory === category.name
+                    ? 'bg-blue-600 text-white shadow-lg'
+                    : 'bg-white text-gray-600 hover:bg-blue-50 border border-gray-200'
+                }`}
+              >
+                {category.displayName} ({category.count})
+              </button>
+            ))}
           </div>
         </div>
-      )}
+
+        {/* Products Grid */}
+        {products.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="text-6xl mb-4">📦</div>
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">No products found</h3>
+            <p className="text-gray-600">
+              {selectedCategory === 'all'
+                ? 'No products are available at the moment.'
+                : `No products found in the ${selectedCategory} category.`}
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {products.map((product, index) => (
+              <ProductCard
+                key={`${product.id}-${index}`}
+                product={product}
+                onAddToCart={handleAddToCart}
+                cartQuantity={getCartQuantity(product.id)}
+                onUpdateQuantity={handleUpdateQuantity}
+              />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
-}
-
-// Helper function to get category icons
-function getCategoryIcon(categoryName) {
-  const icons = {
-    'oils': '🛢️',
-    'chamal-and-chiuras': '🍚',
-    'daal': '🫘'
-  };
-  return icons[categoryName] || '📦';
 }
 
 export default ProductList;
