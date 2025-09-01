@@ -1,40 +1,29 @@
-import React, { useState, useEffect } from 'react';
-import ProductCard from './ProductCard';
-import { fetchAllProducts, fetchProductsByCategory, getAvailableCategories } from "../api/api";
+import React, { useState, useEffect, useCallback } from "react";
+import ProductCard from "./ProductCard";
+import { fetchProducts, fetchProductsByCategory, fetchCategories } from "../api/api";
 
-function ProductList() {
+function ProductList({ cart, addToCart, getCartItemQuantity, updateCartQuantity }) {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedCategory, setSelectedCategory] = useState("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Cart state
-  const [cart, setCart] = useState([]);
-
-  // Load products + categories on mount
   useEffect(() => {
     loadProducts();
     loadCategories();
-
-    // Load cart from localStorage
-    const storedCart = JSON.parse(localStorage.getItem("cart")) || [];
-    setCart(storedCart);
   }, []);
-
-  // Update localStorage whenever cart changes
-  useEffect(() => {
-    localStorage.setItem("cart", JSON.stringify(cart));
-  }, [cart]);
 
   const loadProducts = async () => {
     try {
       setLoading(true);
       setError(null);
-      const fetchedProducts = await fetchAllProducts();
-      setProducts(fetchedProducts);
+      const fetchedProducts = await fetchProducts();
+      console.log("Fetched products:", fetchedProducts); 
+      setProducts(fetchedProducts || []);
     } catch (err) {
-      setError('Failed to load products: ' + err.message);
+      setError("Failed to load products. Please try again.");
+      console.error("Error loading products:", err);
     } finally {
       setLoading(false);
     }
@@ -42,10 +31,12 @@ function ProductList() {
 
   const loadCategories = async () => {
     try {
-      const fetchedCategories = await getAvailableCategories();
-      setCategories(fetchedCategories);
+      const fetchedCategories = await fetchCategories();
+      console.log("Fetched categories:", fetchedCategories); 
+      setCategories(fetchedCategories || []);
     } catch (err) {
-      console.error('Error loading categories:', err);
+      console.error("Error loading categories:", err);
+      setCategories([]);
     }
   };
 
@@ -53,59 +44,35 @@ function ProductList() {
     try {
       setLoading(true);
       setError(null);
-      if (category === 'all') {
+      if (category === "all") {
         await loadProducts();
       } else {
         const fetchedProducts = await fetchProductsByCategory(category);
-        setProducts(fetchedProducts);
+        console.log(`Fetched products for category ${category}:`, fetchedProducts); // Debug
+        setProducts(fetchedProducts || []);
       }
     } catch (err) {
-      setError('Failed to load category products: ' + err.message);
+      setError(`Failed to load products for category ${category}. Please try again.`);
+      console.error(`Error loading products for category ${category}:`, err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCategoryChange = (category) => {
+  const handleCategoryChange = useCallback((category) => {
     setSelectedCategory(category);
     loadProductsByCategory(category);
-  };
+  }, []);
 
-  // Add product to cart or increase qty if already in cart
-  const handleAddToCart = (product) => {
-    setCart(prevCart => {
-      const existing = prevCart.find(item => item.id === product.id);
-      if (existing) {
-        return prevCart.map(item =>
-          item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
-        );
-      }
-      return [...prevCart, { ...product, quantity: 1 }];
-    });
-  };
-
-  // Update quantity or remove if zero
-  const handleUpdateQuantity = (productId, newQty) => {
-    if (newQty < 1) {
-      setCart(prevCart => prevCart.filter(item => item.id !== productId));
-    } else {
-      setCart(prevCart =>
-        prevCart.map(item =>
-          item.id === productId ? { ...item, quantity: newQty } : item
-        )
-      );
+  const handleUpdateQuantity = useCallback((productId, newQty) => {
+    if (updateCartQuantity) {
+      updateCartQuantity(productId, newQty);
     }
-  };
+  }, [updateCartQuantity]);
 
-  const getCartQuantity = (productId) => {
-    const found = cart.find(item => item.id === productId);
-    return found ? found.quantity : 0;
-  };
-
-  // Clear full cart
-  const clearCart = () => {
-    setCart([]);
-  };
+  const clearCart = useCallback(() => {
+    
+  }, []);
 
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
   const totalPrice = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -141,87 +108,69 @@ function ProductList() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header with Cart Summary */}
       <div className="bg-white shadow-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Our Products</h1>
             <p className="text-gray-600">{products.length} products available</p>
           </div>
-
-          {/* Cart Summary */}
-          {cart.length > 0 && (
-            <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg px-6 py-3 border border-blue-200 flex items-center space-x-4">
-              <div className="text-center">
-                <div className="text-lg font-bold text-blue-600">{totalItems}</div>
-                <div className="text-xs text-blue-500">Items</div>
-              </div>
-              <div className="text-center">
-                <div className="text-lg font-bold text-blue-600">Rs. {totalPrice.toLocaleString()}</div>
-                <div className="text-xs text-blue-500">Total</div>
-              </div>
-              <button
-                onClick={clearCart}
-                className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm font-medium transition-colors"
-              >
-                Clear Cart
-              </button>
-            </div>
-          )}
+        
         </div>
       </div>
 
-      {/* Category Filter */}
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="mb-8">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">Filter by Category</h2>
           <div className="flex flex-wrap gap-2">
             <button
-              onClick={() => handleCategoryChange('all')}
+              onClick={() => handleCategoryChange("all")}
               className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                selectedCategory === 'all'
-                  ? 'bg-blue-600 text-white shadow-lg'
-                  : 'bg-white text-gray-600 hover:bg-blue-50 border border-gray-200'
+                selectedCategory === "all"
+                  ? "bg-blue-600 text-white shadow-lg"
+                  : "bg-white text-gray-600 hover:bg-blue-50 border border-gray-200"
               }`}
             >
               All Products
             </button>
-            {categories.map(category => (
-              <button
-                key={category.name}
-                onClick={() => handleCategoryChange(category.name)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                  selectedCategory === category.name
-                    ? 'bg-blue-600 text-white shadow-lg'
-                    : 'bg-white text-gray-600 hover:bg-blue-50 border border-gray-200'
-                }`}
-              >
-                {category.displayName} ({category.count})
-              </button>
-            ))}
+            {categories.length > 0 ? (
+              categories.map((category) => (
+                <button
+                  key={category.name}
+                  onClick={() => handleCategoryChange(category.name)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                    selectedCategory === category.name
+                      ? "bg-blue-600 text-white shadow-lg"
+                      : "bg-white text-gray-600 hover:bg-blue-50 border border-gray-200"
+                  }`}
+                >
+                  {category.displayName} ({category.count})
+                </button>
+              ))
+            ) : (
+              <p className="text-gray-600">No categories available</p>
+            )}
           </div>
         </div>
 
-        {/* Products Grid */}
         {products.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-6xl mb-4">📦</div>
             <h3 className="text-xl font-semibold text-gray-800 mb-2">No products found</h3>
             <p className="text-gray-600">
-              {selectedCategory === 'all'
-                ? 'No products are available at the moment.'
+              {selectedCategory === "all"
+                ? "No products are available at the moment."
                 : `No products found in the ${selectedCategory} category.`}
             </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {products.map((product, index) => (
+            {products.map((product) => (
               <ProductCard
-                key={`${product.id}-${index}`}
+                key={product.id}
                 product={product}
-                onAddToCart={handleAddToCart}
-                cartQuantity={getCartQuantity(product.id)}
-                onUpdateQuantity={handleUpdateQuantity}
+                onAddToCart={addToCart}
+                cartQuantity={getCartItemQuantity(product.id)}
+                onUpdateQuantity={updateCartQuantity}
               />
             ))}
           </div>

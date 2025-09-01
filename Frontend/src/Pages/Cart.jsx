@@ -4,9 +4,29 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faShoppingCart } from "@fortawesome/free-solid-svg-icons";
 
 function Cart({ cart, updateCartQuantity, removeFromCart, getTotalItems, getTotalPrice, setActiveTab }) {
+  const handleStartShopping = () => {
+    setActiveTab('home');
+    
+    setTimeout(() => {
+      const productList = document.querySelector('.product-list-section');
+      if (productList) {
+        productList.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 100);
+  };
+
+  const handleWhatsAppOrder = () => {
+    const whatsappNumber = "+977984XXXXXXX"; // Replace with actual WhatsApp number
+    const message = `Order Details:\n\n${cart
+      .map((item) => `${item.name} - Rs. ${item.price} x ${item.quantity} = Rs. ${item.price * item.quantity}`)
+      .join('\n')}\n\nTotal: Rs. ${getTotalPrice().toLocaleString()}\nPlease confirm my order!`;
+    const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+  };
+
   return (
     <section className="min-h-screen bg-gradient-to-br from-violet-50 via-white to-indigo-50 relative overflow-hidden py-8">
-      {/* Animated Background Elements */}
+   
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-10 left-20 w-40 h-40 bg-gradient-to-r from-violet-400/20 to-purple-400/20 rounded-full animate-[float-gentle_12s_ease-in-out_infinite]"></div>
         <div className="absolute top-32 right-16 w-28 h-28 bg-gradient-to-r from-indigo-400/20 to-blue-400/20 rounded-full animate-[float-reverse-gentle_10s_ease-in-out_infinite_2s]"></div>
@@ -52,7 +72,7 @@ function Cart({ cart, updateCartQuantity, removeFromCart, getTotalItems, getTota
               Your cart is empty
             </p>
             <button
-              onClick={() => setActiveTab('home')}
+              onClick={handleStartShopping}
               className="bg-gradient-to-r from-violet-500 to-purple-600 text-white px-6 py-3 rounded-full font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 animate-[scale-in_1s_ease-out]"
             >
               Start Shopping
@@ -61,7 +81,7 @@ function Cart({ cart, updateCartQuantity, removeFromCart, getTotalItems, getTota
         ) : (
           <div className="bg-white/60 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/30 p-8 animate-[scale-in_1s_ease-out]">
             <div className="space-y-6 mb-8">
-              {cart.map(item => (
+              {cart.map((item) => (
                 <CartItem 
                   key={item.id} 
                   item={item} 
@@ -77,9 +97,12 @@ function Cart({ cart, updateCartQuantity, removeFromCart, getTotalItems, getTota
               </div>
               <div className="flex justify-between text-xl font-bold text-gray-800 mb-6 animate-[fade-in-up_1s_ease-out_0.4s]">
                 <span>Total Price:</span>
-                <span>Rs. {getTotalPrice()}</span>
+                <span>Rs. {getTotalPrice().toLocaleString()}</span>
               </div>
-              <button className="w-full bg-gradient-to-r from-green-500 to-teal-600 text-white px-6 py-3 rounded-full font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 animate-[scale-in_1s_ease-out_0.6s]">
+              <button
+                onClick={handleWhatsAppOrder}
+                className="w-full bg-gradient-to-r from-green-500 to-teal-600 text-white px-6 py-3 rounded-full font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 animate-[scale-in_1s_ease-out_0.6s]"
+              >
                 Place Order via WhatsApp
               </button>
             </div>
@@ -90,7 +113,7 @@ function Cart({ cart, updateCartQuantity, removeFromCart, getTotalItems, getTota
       {/* Floating Action Button */}
       <div className="fixed bottom-8 right-8 z-50">
         <button 
-          onClick={() => setActiveTab('home')} 
+          onClick={handleStartShopping} 
           className="bg-gradient-to-r from-violet-500 to-purple-600 text-white p-4 rounded-full shadow-2xl hover:shadow-3xl transform hover:scale-110 transition-all duration-300 animate-[float_3s_ease-in-out_infinite] group"
         >
           <div className="flex items-center space-x-2">

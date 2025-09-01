@@ -6,7 +6,7 @@ import Categories from "./Pages/Categories";
 import Cart from "./Pages/Cart";
 import Profile from "./Pages/Profile";
 import ProductList from "./components/ProductList";
-import './index.css'
+import './index.css';
 
 function App() {
   const [activeTab, setActiveTab] = useState("home");
@@ -53,32 +53,40 @@ function App() {
     return item ? item.quantity : 0;
   };
 
-  // Totals
+  // Get total items and price
   const getTotalItems = () =>
     cart.reduce((sum, item) => sum + item.quantity, 0);
   const getTotalPrice = () =>
     cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
+  // cart clear hunchha 
+  const clearCart = () => {
+    setCart([]);
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-      {/* ✅ Top Header */}
+    
       <Header
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         getTotalItems={getTotalItems}
+        getTotalPrice={getTotalPrice}
+        clearCart={clearCart}
         setActiveTab={setActiveTab}
       />
 
-      {/* ✅ Main Body */}
+   
       <main className="flex-1 p-4 bg-white">
         {activeTab === "home" && (
-          <div className="mb-8 animate-fadeIn">
+          <div className="mb-8 animate-fadeIn product-list-section" ref={(el) => { if (el) el.classList.add('product-list-section'); }}>
             <Home
               setActiveTab={setActiveTab}
               setSelectedCategory={setSelectedCategory}
               addToCart={addToCart}
             />
             <ProductList
+              cart={cart} 
               addToCart={addToCart}
               getCartItemQuantity={getCartItemQuantity}
               updateCartQuantity={updateCartQuantity}
@@ -118,7 +126,7 @@ function App() {
         )}
       </main>
 
-      {/* ✅ Bottom Navigation */}
+      
       <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
     </div>
   );

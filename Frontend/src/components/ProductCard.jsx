@@ -18,71 +18,92 @@ const ProductCard = ({ product, onAddToCart, cartQuantity = 0, onUpdateQuantity 
     setImageError(true);
   };
 
-  const handleAddToCart = () => {
+  const handleAddToCart = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    if (!product || !product.id) {
+      console.error("Invalid product:", product);
+      return;
+    }
+    
     if (product.stock > 0 && onAddToCart) {
+      console.log("Adding to cart:", product.name);
       onAddToCart(product);
+    } else {
+      console.warn("Cannot add to cart: Product out of stock or invalid action");
     }
   };
 
-  const handleQuantityDecrease = () => {
-    if (cartQuantity > 0 && onUpdateQuantity) {
+  const handleQuantityDecrease = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    if (cartQuantity > 0 && onUpdateQuantity && product.id) {
+      console.log("Decreasing quantity for:", product.name);
       onUpdateQuantity(product.id, cartQuantity - 1);
     }
   };
 
-  const handleQuantityIncrease = () => {
+  const handleQuantityIncrease = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    
     const maxStock = typeof product.stock === "number" ? product.stock : 999;
-    if (cartQuantity < maxStock && onUpdateQuantity) {
+    
+    if (cartQuantity < maxStock && onUpdateQuantity && product.id) {
+      console.log("Increasing quantity for:", product.name);
       onUpdateQuantity(product.id, cartQuantity + 1);
+    } else {
+      console.warn("Cannot increase quantity: Max stock reached or invalid action");
     }
   };
 
-  // Get category icon
   const getCategoryIcon = (category) => {
     const icons = {
       'oils': '🛢️',
       'chamal-and-chiuras': '🍚',
       'daals': '🫘',
-      'oil': '🛢️' // fallback for singular form
+      'oil': '🛢️' 
     };
-    return icons[category] || '📦';
+    return icons[category.toLowerCase()] || '📦';
   };
 
-  // Get category display name
   const getCategoryDisplayName = (category) => {
     const names = {
       'oils': 'Oil',
       'chamal-and-chiuras': 'Rice & Chiura',
       'daals': 'Lentils',
-      'oil': 'Oil' // fallback
+      'oil': 'Oil' 
     };
-    return names[category] || category;
+    return names[category.toLowerCase()] || category;
   };
 
   const imageUrl = getImageUrl();
-  const isOutOfStock = product.stock === 0 || product.stock === false;
+  const isOutOfStock = !product.stock || product.stock === 0 || product.stock === false;
   const isInCart = cartQuantity > 0;
-  const stockDisplay =
-    typeof product.stock === "number"
-      ? product.stock
-      : product.stock
-      ? "Available"
-      : "Out of Stock";
+  
+  const stockDisplay = typeof product.stock === "number" 
+    ? product.stock 
+    : product.stock 
+    ? "Available" 
+    : "Out of Stock";
 
   return (
     <div
       className={`relative bg-white rounded-2xl shadow-md p-4 transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl ${
         isOutOfStock ? "opacity-60" : ""
       }`}
+      onClick={(e) => e.stopPropagation()}
     >
-      {/* Category Badge */}
+  
       {product.category && (
         <div className="absolute top-2 left-2 z-10 bg-white/90 backdrop-blur-sm text-xs font-medium px-2 py-1 rounded-lg shadow-sm">
           {getCategoryIcon(product.category)} {getCategoryDisplayName(product.category)}
         </div>
       )}
 
-      {/* Product Image */}
+  
       <div className="relative w-full h-48 flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl overflow-hidden">
         {imageUrl && !imageError ? (
           <>
@@ -94,7 +115,7 @@ const ProductCard = ({ product, onAddToCart, cartQuantity = 0, onUpdateQuantity 
             )}
             <img
               src={imageUrl}
-              alt={product.name}
+              alt={product.name || "Product Image"}
               onLoad={handleImageLoad}
               onError={handleImageError}
               className={`object-contain max-h-48 transition-all duration-500 ${
@@ -109,7 +130,7 @@ const ProductCard = ({ product, onAddToCart, cartQuantity = 0, onUpdateQuantity 
           </div>
         )}
 
-        {/* Overlay for out of stock */}
+        
         {isOutOfStock && (
           <div className="absolute inset-0 bg-black/70 text-white flex items-center justify-center font-semibold text-lg backdrop-blur-sm">
             <div className="text-center">
@@ -121,18 +142,18 @@ const ProductCard = ({ product, onAddToCart, cartQuantity = 0, onUpdateQuantity 
 
         {/* Cart quantity badge */}
         {isInCart && (
-          <div className="absolute top-2 right-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-bold px-3 py-1 rounded-full shadow-lg animate-pulse">
+          <div className="absolute top-2 right-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-bold px-3 py-1 rounded-full shadow-lg">
             {cartQuantity}
           </div>
         )}
       </div>
 
-      {/* Product Info */}
+      {/* Product ko Info */}
       <div className="mt-4 space-y-3">
-        {/* Product Name */}
+        {/* Product ko Name */}
         <div>
           <h4 className="text-lg font-semibold text-gray-800 line-clamp-2 leading-tight">
-            {product.name}
+            {product.name || 'Unknown Product'}
           </h4>
           {product.description && (
             <p className="text-sm text-gray-500 mt-1 line-clamp-2">
@@ -141,14 +162,13 @@ const ProductCard = ({ product, onAddToCart, cartQuantity = 0, onUpdateQuantity 
           )}
         </div>
 
-        {/* Price */}
+        {/* Price and Stock Status Check garna*/}
         <div className="flex items-center justify-between">
           <div className="text-xl font-bold text-gradient bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             <span className="text-sm font-medium text-gray-500">Rs.</span>
             {product.price?.toLocaleString() || 0}
           </div>
           
-          {/* Stock Status */}
           <div className="text-right">
             <span
               className={`text-sm font-medium px-2 py-1 rounded-full ${
@@ -168,10 +188,11 @@ const ProductCard = ({ product, onAddToCart, cartQuantity = 0, onUpdateQuantity 
           </div>
         </div>
 
-        {/* Actions */}
+        
         <div className="mt-4">
           {!isInCart ? (
             <button
+              type="button"
               onClick={handleAddToCart}
               disabled={isOutOfStock}
               className={`w-full py-3 px-4 rounded-xl font-medium transition-all duration-200 flex items-center justify-center space-x-2 ${
@@ -187,6 +208,7 @@ const ProductCard = ({ product, onAddToCart, cartQuantity = 0, onUpdateQuantity 
             <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-3">
               <div className="flex items-center justify-between gap-3">
                 <button
+                  type="button"
                   onClick={handleQuantityDecrease}
                   className="w-10 h-10 bg-white border-2 border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 text-xl font-bold transition-all duration-200 flex items-center justify-center shadow-sm"
                 >
@@ -199,11 +221,9 @@ const ProductCard = ({ product, onAddToCart, cartQuantity = 0, onUpdateQuantity 
                 </div>
                 
                 <button
+                  type="button"
                   onClick={handleQuantityIncrease}
-                  disabled={
-                    cartQuantity >=
-                    (typeof product.stock === "boolean" ? product.stock : 999)
-                  }
+                  disabled={cartQuantity >= (typeof product.stock === "number" ? product.stock : 999)}
                   className="w-10 h-10 bg-white border-2 border-gray-200 rounded-lg hover:border-green-300 hover:bg-green-50 text-xl font-bold transition-all duration-200 flex items-center justify-center shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   +
@@ -222,7 +242,7 @@ const ProductCard = ({ product, onAddToCart, cartQuantity = 0, onUpdateQuantity 
         </div>
       </div>
 
-      {/* Subtle hover glow effect */}
+      
       <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-400/0 via-purple-400/0 to-pink-400/0 hover:from-blue-400/5 hover:via-purple-400/5 hover:to-pink-400/5 transition-all duration-500 pointer-events-none"></div>
     </div>
   );

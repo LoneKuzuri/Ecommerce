@@ -1,9 +1,9 @@
 'use strict';
 
 /**
- * oil router
+ * product router
  */
 
 const { createCoreRouter } = require('@strapi/strapi').factories;
 
-module.exports = createCoreRouter('api::oil.oil');
+module.exports = createCoreRouter('api::product.product');

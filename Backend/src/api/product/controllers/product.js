@@ -1,9 +1,9 @@
 'use strict';
 
 /**
- * daal controller
+ * product controller
  */
 
 const { createCoreController } = require('@strapi/strapi').factories;
 
-module.exports = createCoreController('api::daal.daal');
+module.exports = createCoreController('api::product.product');

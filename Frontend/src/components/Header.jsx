@@ -2,16 +2,16 @@ import React from 'react';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faShoppingCart } from "@fortawesome/free-solid-svg-icons";
 
-function Header({ searchQuery, setSearchQuery, getTotalItems, setActiveTab }) {
+function Header({ searchQuery, setSearchQuery, getTotalItems, getTotalPrice, clearCart, setActiveTab }) {
   return (
     <header className="relative bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg">
-      {/* Animated Background Elements */}
+    
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-10 w-32 h-32 bg-gradient-to-r from-violet-400/30 to-purple-400/30 rounded-full animate-[float-gentle_10s_ease-in-out_infinite]"></div>
         <div className="absolute top-8 right-12 w-24 h-24 bg-gradient-to-r from-indigo-400/30 to-blue-400/30 rounded-full animate-[float-reverse-gentle_8s_ease-in-out_infinite_2s]"></div>
       </div>
 
-      {/* Header Content */}
+      
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between flex-wrap gap-4">
         {/* Logo */}
         <div 
@@ -33,9 +33,9 @@ function Header({ searchQuery, setSearchQuery, getTotalItems, setActiveTab }) {
           </div>
         </div>
 
-        {/* Actions */}
+        
         <div className="flex items-center space-x-3 sm:space-x-4">
-          {/* Search Input */}
+          
           <div className="relative animate-[fade-in-up_1s_ease-out_0.3s]">
             <input
               type="text"
@@ -52,8 +52,8 @@ function Header({ searchQuery, setSearchQuery, getTotalItems, setActiveTab }) {
             </span>
           </div>
 
-          {/* Cart Button */}
-          <div className="relative group">
+          {/* Cart Section */}
+          <div className="flex items-center space-x-2">
             <button
               onClick={() => setActiveTab('cart')}
               className="relative bg-white/20 backdrop-blur-sm rounded-full p-3 hover:bg-white/30 transition-all duration-300 animate-[pulse-gentle_3s_ease-in-out_infinite] group"
@@ -66,15 +66,30 @@ function Header({ searchQuery, setSearchQuery, getTotalItems, setActiveTab }) {
                 </span>
               )}
             </button>
-            {/* Tooltip */}
-            <span className="absolute hidden group-hover:block -top-10 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
-              View Cart ({getTotalItems()} items)
-            </span>
+
+            {getTotalItems() > 0 && (
+              <div className="bg-white/20 backdrop-blur-sm rounded-lg px-4 py-2 flex items-center space-x-3">
+                <div className="text-center">
+                  <div className="text-sm font-bold text-white">{getTotalItems()}</div>
+                  <div className="text-xs text-gray-200">Items</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-sm font-bold text-white">Rs. {getTotalPrice().toLocaleString()}</div>
+                  <div className="text-xs text-gray-200">Total</div>
+                </div>
+                <button
+                  onClick={clearCart}
+                  className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs font-medium transition-colors"
+                >
+                  Clear Cart
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Progress Indicator */}
+      
       <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-violet-400 via-purple-400 to-indigo-400 animate-[slide-progress_3s_ease-in-out_infinite]"></div>
     </header>
   );

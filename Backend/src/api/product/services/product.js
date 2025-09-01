@@ -1,9 +1,9 @@
 'use strict';
 
 /**
- * daal service
+ * product service
  */
 
 const { createCoreService } = require('@strapi/strapi').factories;
 
-module.exports = createCoreService('api::daal.daal');
+module.exports = createCoreService('api::product.product');
